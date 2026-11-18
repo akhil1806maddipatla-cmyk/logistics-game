@@ -1,0 +1,6 @@
+{
+  "name": "Global Transport Empire",
+  "description": "A 3D isometric transport and logistics tycoon game featuring procedural geography, multi-lane road networks, highway interchanges, railway yards, bridges, and coastal port infrastructure.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
