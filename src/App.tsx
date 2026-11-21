@@ -2574,8 +2574,19 @@ export default function App() {
                     selectedCellReport.parcelId &&
                     !selectedCellReport.parcelOwned)) && (
                   <div
-                    className="pointer-events-auto rounded-xl p-3.5 border border-slate-700 shadow-2xl max-w-md"
-                    style={{ backgroundColor: 'rgba(15, 23, 42, 0.95)' }}
+                    className={`pointer-events-auto rounded-xl p-3.5 border shadow-2xl max-w-md ${
+                      selectedCellReport?.building?.id ===
+                      'building-city-hq-tower'
+                        ? 'border-sky-400/60 ring-1 ring-amber-400/35 shadow-[0_0_28px_rgba(56,189,248,0.22)]'
+                        : 'border-slate-700'
+                    }`}
+                    style={{
+                      backgroundColor:
+                        selectedCellReport?.building?.id ===
+                        'building-city-hq-tower'
+                          ? 'rgba(15, 23, 42, 0.9)'
+                          : 'rgba(15, 23, 42, 0.95)',
+                    }}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-bold tracking-wider uppercase text-sky-400">
@@ -2588,9 +2599,12 @@ export default function App() {
                               : AIRPORT_LOCKED_UI_TITLE
                             : selectedCellReport?.zoneCategory === 'RAIL_YARD'
                               ? 'GTE Intermodal Railway Freight Hub (40×50)'
-                              : selectedCellReport?.building
-                                ? `${selectedCellReport.building.name} (Level ${selectedCellReport.building.level})`
-                                : 'Available Land Parcel'}
+                              : selectedCellReport?.building?.id ===
+                                  'building-city-hq-tower'
+                                ? `Corporate Delivery Headquarters (Level ${selectedCellReport.building.level}/${selectedCellReport.building.maxLevel})`
+                                : selectedCellReport?.building
+                                  ? `${selectedCellReport.building.name} (Level ${selectedCellReport.building.level})`
+                                  : 'Available Land Parcel'}
                       </span>
                       <button
                         type="button"
@@ -4012,6 +4026,218 @@ export default function App() {
                                   {availableSlots > 0
                                     ? '+ Buy Mini Truck ($14,000)'
                                     : 'Slots Full — Upgrade Depot'}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (bld.id === 'building-city-hq-tower') {
+                          const hqSummary =
+                            worldRef.current!.economy.getDeliveryHqSummary();
+                          const canAffordHqUpgrade =
+                            hudStats.money >= hqSummary.upgradeCost;
+                          return (
+                            <div
+                              data-testid="delivery-hq-inspector-panel"
+                              className="mt-2 rounded-xl p-3 border border-sky-400/40 ring-1 ring-amber-400/30 text-xs text-slate-200 space-y-2.5"
+                              style={{
+                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                              }}
+                            >
+                              {/* Company Overview Banner */}
+                              <div className="flex items-center justify-between gap-2 pb-2 border-b border-sky-500/25">
+                                <div>
+                                  <div className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                                    CTH · Global Transport Empire Command
+                                  </div>
+                                  <div className="text-[11px] text-slate-300">
+                                    Reserved {hqSummary.widthCells}×
+                                    {hqSummary.depthCells} Tile Plot (
+                                    {hqSummary.totalCells} Cells) · Grid (
+                                    {hqSummary.gx}, {hqSummary.gz})
+                                  </div>
+                                </div>
+                                <span className="px-2 py-0.5 rounded bg-sky-500/20 border border-sky-400/50 text-sky-300 font-bold text-[10px]">
+                                  HQ LVL {hqSummary.level} / {hqSummary.maxLevel}
+                                </span>
+                              </div>
+
+                              {/* Active Fleet Summary (Trucks, Trains, Cargo Planes) */}
+                              <div>
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-sky-300 mb-1">
+                                  Active Empire Fleet Summary ({hqSummary.fleetSummary.activeFleetCount} / {hqSummary.fleetSummary.totalFleetCount} Active)
+                                </div>
+                                <div className="grid grid-cols-3 gap-1.5 text-center">
+                                  <div className="p-1.5 rounded-lg bg-slate-900/90 border border-sky-500/30">
+                                    <div className="text-[10px] text-slate-400">
+                                      Trucks
+                                    </div>
+                                    <div
+                                      data-testid="hq-fleet-trucks"
+                                      className="font-bold text-sky-300 text-xs"
+                                    >
+                                      {hqSummary.fleetSummary.activeTrucks} /{' '}
+                                      {hqSummary.fleetSummary.trucks}
+                                    </div>
+                                  </div>
+                                  <div className="p-1.5 rounded-lg bg-slate-900/90 border border-amber-500/30">
+                                    <div className="text-[10px] text-slate-400">
+                                      Trains
+                                    </div>
+                                    <div
+                                      data-testid="hq-fleet-trains"
+                                      className="font-bold text-amber-300 text-xs"
+                                    >
+                                      {hqSummary.fleetSummary.activeTrains} /{' '}
+                                      {hqSummary.fleetSummary.trains}
+                                    </div>
+                                  </div>
+                                  <div className="p-1.5 rounded-lg bg-slate-900/90 border border-emerald-500/30">
+                                    <div className="text-[10px] text-slate-400">
+                                      Cargo Planes
+                                    </div>
+                                    <div
+                                      data-testid="hq-fleet-planes"
+                                      className="font-bold text-emerald-300 text-xs"
+                                    >
+                                      {hqSummary.fleetSummary.activeCargoPlanes}{' '}
+                                      / {hqSummary.fleetSummary.cargoPlanes}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Overall Transport Empire Revenue Stats */}
+                              <div>
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-300 mb-1">
+                                  Transport Empire Revenue &amp; Operations
+                                </div>
+                                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                                  <div className="p-1.5 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                                    <span className="text-slate-400">
+                                      Treasury:
+                                    </span>
+                                    <span
+                                      data-testid="hq-stat-treasury"
+                                      className="font-bold text-emerald-300"
+                                    >
+                                      {formatMoney(
+                                        hqSummary.empireRevenue.currentMoneyBalance
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="p-1.5 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                                    <span className="text-slate-400">
+                                      Total Revenue:
+                                    </span>
+                                    <span
+                                      data-testid="hq-stat-revenue"
+                                      className="font-bold text-sky-300"
+                                    >
+                                      {formatMoney(
+                                        hqSummary.empireRevenue.totalRevenueEarned
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="p-1.5 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                                    <span className="text-slate-400">
+                                      Net Profit:
+                                    </span>
+                                    <span className="font-bold text-amber-300">
+                                      {formatMoney(
+                                        hqSummary.empireRevenue.netEmpireProfit
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="p-1.5 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                                    <span className="text-slate-400">
+                                      Deliveries:
+                                    </span>
+                                    <span className="font-bold text-white">
+                                      {
+                                        hqSummary.empireRevenue
+                                          .completedContracts
+                                      }{' '}
+                                      ({hqSummary.empireRevenue.totalCargoDeliveredTons}t)
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Architectural & Y-Layering Spec */}
+                              <div className="p-2 rounded-lg bg-slate-900/90 border border-sky-500/20 text-[10px] text-slate-300 space-y-0.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sky-300 font-semibold">
+                                    Tiered 5F + 2F Glass &amp; Concrete HQ
+                                  </span>
+                                  <span className="text-amber-300 font-semibold">
+                                    +{hqSummary.contractBonusPercent}% Empire
+                                    Contract Bonus
+                                  </span>
+                                </div>
+                                <div>
+                                  Rooftop Helipad (&ldquo;H&rdquo;) · Solar
+                                  Array · CTH Entrance Portico · Vault:{' '}
+                                  {hqSummary.storedCargoTons}t /{' '}
+                                  {hqSummary.storageCapacityTons}t
+                                </div>
+                                <div className="text-slate-400">
+                                  Y-Layers: Grass{' '}
+                                  {hqSummary.elevationLayers.baseTerrainGrass.toFixed(
+                                    2
+                                  )}{' '}
+                                  · Lawn{' '}
+                                  {hqSummary.elevationLayers.landscapedLawnBeds.toFixed(
+                                    2
+                                  )}{' '}
+                                  · Stone Plaza{' '}
+                                  {hqSummary.elevationLayers.pavedStonePlazaAndSidewalks.toFixed(
+                                    2
+                                  )}{' '}
+                                  · Plinth{' '}
+                                  {hqSummary.elevationLayers.buildingFoundationPlinth.toFixed(
+                                    2
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Headquarters Upgrades & Quick Actions */}
+                              <div className="pt-0.5 flex flex-wrap items-center gap-2">
+                                {hqSummary.level < hqSummary.maxLevel ? (
+                                  <button
+                                    type="button"
+                                    data-testid="upgrade-delivery-hq-btn"
+                                    onClick={() =>
+                                      handleUpgradeSelectedBuilding(bld)
+                                    }
+                                    className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer transition ${
+                                      canAffordHqUpgrade
+                                        ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-sm'
+                                        : 'bg-slate-800 text-slate-400'
+                                    }`}
+                                  >
+                                    Upgrade HQ to Lvl {hqSummary.level + 1} (
+                                    {formatMoney(hqSummary.upgradeCost)})
+                                  </button>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-bold">
+                                    Maximum Headquarters Tier Reached
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setActivePanel('VEHICLES')}
+                                  className="px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-200 font-semibold cursor-pointer"
+                                >
+                                  Fleet Roster
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setActivePanel('CONTRACTS')}
+                                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-semibold cursor-pointer"
+                                >
+                                  Contracts
                                 </button>
                               </div>
                             </div>

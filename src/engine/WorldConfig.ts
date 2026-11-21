@@ -267,7 +267,7 @@ export function createDefaultWorldConfig(
     coreCity: {
       startX: 70,
       endX: 104,
-      startZ: 35,
+      startZ: 34,
       endZ: 75,
       roundaboutCenterX: 86,
       roundaboutCenterZ: 55,

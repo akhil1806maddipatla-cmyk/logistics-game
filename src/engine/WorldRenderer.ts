@@ -22,6 +22,7 @@ import {
   getVehicleSpecById,
   TrailerBodyStyle,
 } from './Catalogues';
+import { PlacedBuildingRecord } from './EconomyAndSimulationSystem';
 import {
   clampCameraPanningBounds,
   COASTAL_PALETTE_STANDARDS,
@@ -8805,6 +8806,13 @@ export class WorldRenderer {
       bGroup.name = bld.id;
       bGroup.position.set(cx, elev, cz);
 
+      // Dedicated 10 x 20 Tile Corporate Delivery Headquarters (HQ) Compound
+      if (bld.id === 'building-city-hq-tower') {
+        this.buildDeliveryHeadquartersCompound(bGroup, bld);
+        this.buildingsGroup.add(bGroup);
+        continue;
+      }
+
       // 1. Landscaped Pavement Verge & Concrete Foundation Plinth (eliminates floating/clipping)
       const vergePad = new THREE.Mesh(
         new THREE.BoxGeometry(w + 0.75, 0.05, d + 0.75),
@@ -8865,124 +8873,7 @@ export class WorldRenderer {
 
       const roofStyle = spec?.roofStyle ?? 'FLAT_MEMBRANE_HVAC';
 
-      if (bld.id === 'building-city-hq-tower') {
-        // =====================================================================
-        // BESPOKE 5 x 7 GRID-BLOCK DELIVERY HEADQUARTERS (10m x 14m footprint)
-        // Architectural corporate & logistics command center with glazed atrium,
-        // cantilevered entrance canopy, executive dispatch bays, and illuminated crown
-        // =====================================================================
-        const podiumH = 3.2;
-        const podium = new THREE.Mesh(
-          new THREE.BoxGeometry(w * 0.94, podiumH, d * 0.92),
-          this.materials.cityTowerBody
-        );
-        podium.position.y = 0.18 + podiumH * 0.5;
-        podium.castShadow = true;
-        podium.receiveShadow = true;
-        bGroup.add(podium);
-
-        // Double-height glazed entrance atrium on the South (+Z, roundabout-facing) facade
-        const atriumGlass = new THREE.Mesh(
-          new THREE.BoxGeometry(w * 0.68, podiumH * 0.86, 0.24),
-          this.materials.cityGlass
-        );
-        atriumGlass.position.set(0, 0.18 + podiumH * 0.46, d * 0.46);
-        bGroup.add(atriumGlass);
-
-        // Cantilevered architectural entrance canopy + support columns
-        const entranceCanopy = new THREE.Mesh(
-          new THREE.BoxGeometry(w * 0.74, 0.22, 1.8),
-          accentMat
-        );
-        entranceCanopy.position.set(0, 2.45, d * 0.46 + 0.75);
-        entranceCanopy.castShadow = true;
-        bGroup.add(entranceCanopy);
-
-        for (const colX of [-w * 0.28, w * 0.28]) {
-          const pillar = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.11, 0.13, 2.25, 10),
-            this.materials.accentSteel
-          );
-          pillar.position.set(colX, 1.3, d * 0.46 + 1.35);
-          bGroup.add(pillar);
-        }
-
-        // Main Curtain-Wall Tower Shaft with vertical architectural fins
-        const shaftH = h * 0.56;
-        const shaftW = w * 0.78;
-        const shaftD = d * 0.74;
-        const shaft = new THREE.Mesh(
-          new THREE.BoxGeometry(shaftW, shaftH, shaftD),
-          bodyMat
-        );
-        shaft.position.y = 0.18 + podiumH + shaftH * 0.5;
-        shaft.castShadow = true;
-        shaft.receiveShadow = true;
-        bGroup.add(shaft);
-
-        // Vertical aluminum curtain-wall mullions
-        for (let mIdx = -2; mIdx <= 2; mIdx++) {
-          const mullion = new THREE.Mesh(
-            new THREE.BoxGeometry(0.1, shaftH + podiumH * 0.6, shaftD + 0.12),
-            this.materials.cityTowerBody
-          );
-          mullion.position.set(
-            mIdx * (shaftW * 0.21),
-            0.18 + podiumH * 0.7 + shaftH * 0.5,
-            0
-          );
-          bGroup.add(mullion);
-        }
-
-        // Upper Executive Command Deck & Stepped Crown
-        const crownH = h * 0.18;
-        const crown = new THREE.Mesh(
-          new THREE.BoxGeometry(shaftW * 0.82, crownH, shaftD * 0.82),
-          this.materials.cityGlass
-        );
-        crown.position.y = 0.18 + podiumH + shaftH + crownH * 0.5;
-        crown.castShadow = true;
-        bGroup.add(crown);
-
-        const crownParapet = new THREE.Mesh(
-          new THREE.BoxGeometry(shaftW * 0.86, 0.32, shaftD * 0.86),
-          accentMat
-        );
-        crownParapet.position.y = 0.18 + podiumH + shaftH + crownH + 0.16;
-        bGroup.add(crownParapet);
-
-        // Rooftop Helipad Pad & Communications Mast
-        const helipad = new THREE.Mesh(
-          new THREE.CylinderGeometry(1.65, 1.75, 0.14, 24),
-          this.materials.asphalt
-        );
-        helipad.position.set(0, 0.18 + podiumH + shaftH + crownH + 0.38, 0.4);
-        bGroup.add(helipad);
-
-        const spire = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.08, 0.16, 2.8, 10),
-          this.materials.accentSteel
-        );
-        spire.position.set(0, 0.18 + podiumH + shaftH + crownH + 1.7, -1.4);
-        bGroup.add(spire);
-
-        // North (-Z) Express Courier & Logistics Dispatch Loading Bays
-        const rearCanopy = new THREE.Mesh(
-          new THREE.BoxGeometry(w * 0.72, 0.18, 1.2),
-          this.materials.accentSteel
-        );
-        rearCanopy.position.set(0, 2.15, -d * 0.46 - 0.45);
-        bGroup.add(rearCanopy);
-
-        for (const bayX of [-w * 0.22, 0, w * 0.22]) {
-          const shutter = new THREE.Mesh(
-            new THREE.BoxGeometry(1.35, 1.65, 0.12),
-            this.materials.wheelHubSteel
-          );
-          shutter.position.set(bayX, 1.02, -d * 0.46 - 0.04);
-          bGroup.add(shutter);
-        }
-      } else if (roofStyle === 'STEPPED_CROWN') {
+      if (roofStyle === 'STEPPED_CROWN') {
         // Multi-tier High-Rise Tower with Podium, Curtainwall Shaft, Stepped Crown & Spire
         const podiumH = Math.min(3.0, h * 0.25);
         const podium = new THREE.Mesh(
@@ -9123,6 +9014,1360 @@ export class WorldRenderer {
       }
 
       this.buildingsGroup.add(bGroup);
+    }
+  }
+
+  /**
+   * Builds the dedicated 10 x 20 Tile (20m x 40m) Corporate Delivery Headquarters (HQ) Compound
+   * matching the architectural reference image:
+   * - Exact Y-Axis Layering & Zero Z-Fighting:
+   *   * Base Terrain Grass = 0.00
+   *   * Landscaped Lawn Beds = 0.02
+   *   * Paved Stone Plaza & Sidewalks = 0.03
+   *   * Building Foundation Plinth = 0.04
+   * - Tiered L-Shaped Glass & Concrete Structure (4–5 stories on main block stepping down to a 2-story side wing)
+   *   with horizontal white/light-grey concrete floor slabs, floor-to-ceiling tinted glass curtain walls,
+   *   and subtle warm interior office lighting visible through the glass.
+   * - Rooftop Details: Circular Helipad ("H") with safety perimeter markings & antenna spire on topmost roof;
+   *   angled solar panel arrays & green rooftop garden planters on lower stepped roof terraces.
+   * - Main Entrance & Branding: Projecting concrete entrance portico with glass sliding/revolving doors and
+   *   illuminated CTH / GTE corporate signage above the canopy.
+   * - Manicured Plaza & Landscaping: Light-grey stone tile plaza, perimeter sidewalks connecting cleanly to
+   *   the city road network, rectangular manicured grass lawns bordered by low trimmed boxwood hedges,
+   *   stylized broadleaf & cypress trees, potted ornamental shrubs, wooden/metal park benches, and slim streetlamps.
+   * - Instanced Rendering: Window mullions and foliage clusters use THREE.InstancedMesh for locked 60 FPS.
+   */
+  private buildDeliveryHeadquartersCompound(
+    bGroup: THREE.Group,
+    bld: PlacedBuildingRecord
+  ): void {
+    const cs = this.world.config.cellSize; // 2.0m per tile
+    const plotW = bld.widthCells * cs; // 10 * 2.0 = 20.0m (X: -10.0 .. +10.0)
+    const plotD = bld.depthCells * cs; // 20 * 2.0 = 40.0m (Z: -20.0 .. +20.0)
+
+    // Exact Y-axis elevation layers (relative to Base Terrain Grass = 0.00)
+    const Y_BASE_GRASS = 0.0;
+    const Y_LAWN_BEDS = 0.02;
+    const Y_STONE_PLAZA = 0.03;
+    const Y_FOUNDATION_PLINTH = 0.04;
+
+    bGroup.userData = {
+      facilityType: 'DELIVERY_HEADQUARTERS',
+      buildingId: bld.id,
+      widthCells: bld.widthCells,
+      depthCells: bld.depthCells,
+      level: bld.level,
+      elevationLayers: {
+        baseTerrainGrass: Y_BASE_GRASS,
+        landscapedLawnBeds: Y_LAWN_BEDS,
+        pavedStonePlazaAndSidewalks: Y_STONE_PLAZA,
+        buildingFoundationPlinth: Y_FOUNDATION_PLINTH,
+      },
+    };
+
+    const maxAniso = this.renderer.capabilities.getMaxAnisotropy();
+
+    // -------------------------------------------------------------------------
+    // Procedural Textures (Stone Tile Plaza, Helipad "H", Solar Array, CTH/GTE Sign)
+    // -------------------------------------------------------------------------
+    const stonePlazaTex = (() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#dfe5ec';
+      ctx.fillRect(0, 0, 512, 512);
+
+      // Subtle architectural stone tile variations
+      const tileStep = 64;
+      for (let ty = 0; ty < 8; ty++) {
+        for (let tx = 0; tx < 8; tx++) {
+          const shade = ((tx * 7 + ty * 13) % 5) * 2 - 4;
+          const base = 223 + shade;
+          ctx.fillStyle = `rgb(${base}, ${base + 5}, ${base + 11})`;
+          ctx.fillRect(
+            tx * tileStep + 2,
+            ty * tileStep + 2,
+            tileStep - 4,
+            tileStep - 4
+          );
+        }
+      }
+      // Crisp mortar grid lines
+      ctx.strokeStyle = '#b8c2ce';
+      ctx.lineWidth = 3;
+      for (let i = 0; i <= 512; i += tileStep) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, 512);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(512, i);
+        ctx.stroke();
+      }
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(10, 20);
+      tex.anisotropy = maxAniso;
+      return tex;
+    })();
+
+    const helipadTex = (() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(0, 0, 512, 512);
+
+      // Outer safety border square
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 10;
+      ctx.strokeRect(24, 24, 464, 464);
+
+      // Inner dark-slate helipad circle
+      ctx.beginPath();
+      ctx.arc(256, 256, 188, 0, Math.PI * 2);
+      ctx.fillStyle = '#64748b';
+      ctx.fill();
+
+      // Yellow/white safety perimeter ring
+      ctx.beginPath();
+      ctx.arc(256, 256, 184, 0, Math.PI * 2);
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 12;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(256, 256, 162, 0, Math.PI * 2);
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 6;
+      ctx.setLineDash([22, 14]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Crisp white "H" in center
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(178, 156, 32, 200);
+      ctx.fillRect(302, 156, 32, 200);
+      ctx.fillRect(178, 240, 156, 32);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = maxAniso;
+      return tex;
+    })();
+
+    const solarPanelTex = (() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#1e3a5f';
+      ctx.fillRect(0, 0, 256, 256);
+
+      ctx.strokeStyle = '#93c5fd';
+      ctx.lineWidth = 2;
+      for (let x = 0; x <= 256; x += 32) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 256);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= 256; y += 64) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(256, y);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 8;
+      ctx.strokeRect(4, 4, 248, 248);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = maxAniso;
+      return tex;
+    })();
+
+    const hqSignTex = (() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 160;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(0, 0, 512, 160);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(4, 4, 504, 152);
+
+      // Bold Emerald-Teal "CTH" Corporate Letters matching reference image + subtle GTE badge
+      ctx.fillStyle = '#0d9488';
+      ctx.font = '900 96px "Plus Jakarta Sans", "Arial Black", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('CTH', 215, 84);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(350, 34, 134, 92);
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = '800 38px "Plus Jakarta Sans", Arial, sans-serif';
+      ctx.fillText('GTE', 417, 68);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '700 18px "Plus Jakarta Sans", Arial, sans-serif';
+      ctx.fillText('DELIVERY HQ', 417, 104);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = maxAniso;
+      return tex;
+    })();
+
+    // -------------------------------------------------------------------------
+    // Shared PBR Materials for the HQ Compound
+    // -------------------------------------------------------------------------
+    const concreteSlabMat = new THREE.MeshStandardMaterial({
+      color: 0xf1f5f9,
+      roughness: 0.42,
+      metalness: 0.08,
+    });
+    const concreteSpandrelMat = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0,
+      roughness: 0.48,
+      metalness: 0.12,
+    });
+    const plinthConcreteMat = new THREE.MeshStandardMaterial({
+      color: 0xcbd5e1,
+      roughness: 0.56,
+      metalness: 0.08,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
+    const stonePlazaMat = new THREE.MeshStandardMaterial({
+      map: stonePlazaTex,
+      color: 0xffffff,
+      roughness: 0.62,
+      metalness: 0.06,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+    const sidewalkCurbMat = new THREE.MeshStandardMaterial({
+      color: 0xcfd8e3,
+      roughness: 0.65,
+      metalness: 0.05,
+    });
+    const baseGrassMat = new THREE.MeshStandardMaterial({
+      color: 0x558b3e,
+      roughness: 0.9,
+      metalness: 0.02,
+    });
+    const manicuredLawnMat = new THREE.MeshStandardMaterial({
+      color: 0x4d8037,
+      roughness: 0.84,
+      metalness: 0.04,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+    const boxwoodHedgeMat = new THREE.MeshStandardMaterial({
+      color: 0x2d5a27,
+      roughness: 0.86,
+      metalness: 0.03,
+    });
+    const curtainGlassMat = new THREE.MeshStandardMaterial({
+      color: 0x3b6e8c,
+      roughness: 0.14,
+      metalness: 0.78,
+      transparent: true,
+      opacity: 0.76,
+    });
+    const balustradeGlassMat = new THREE.MeshStandardMaterial({
+      color: 0x7dd3fc,
+      roughness: 0.18,
+      metalness: 0.65,
+      transparent: true,
+      opacity: 0.52,
+    });
+    const warmInteriorMat = new THREE.MeshStandardMaterial({
+      color: 0xfef3c7,
+      emissive: 0xf59e0b,
+      emissiveIntensity: 0.42,
+      roughness: 0.55,
+      metalness: 0.05,
+    });
+    const mullionMetalMat = new THREE.MeshStandardMaterial({
+      color: 0x94a3b8,
+      roughness: 0.32,
+      metalness: 0.68,
+    });
+    const darkMetalMat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      roughness: 0.36,
+      metalness: 0.72,
+    });
+    const benchWoodMat = new THREE.MeshStandardMaterial({
+      color: 0xb47b44,
+      roughness: 0.64,
+      metalness: 0.08,
+    });
+
+    // -------------------------------------------------------------------------
+    // 1. EXACT Y-AXIS LAYERING (0.00 Grass -> 0.02 Lawns -> 0.03 Stone Plaza -> 0.04 Plinth)
+    // -------------------------------------------------------------------------
+    // Layer 0.00: Base Terrain Grass Pad flush at Y = 0.00
+    const baseGrassGeo = new THREE.PlaneGeometry(plotW, plotD);
+    baseGrassGeo.rotateX(-Math.PI / 2);
+    const baseGrassMesh = new THREE.Mesh(baseGrassGeo, baseGrassMat);
+    baseGrassMesh.position.set(0, Y_BASE_GRASS + 0.002, 0);
+    baseGrassMesh.receiveShadow = true;
+    bGroup.add(baseGrassMesh);
+
+    // Layer 0.03: Paved Light-Grey Stone Tile Plaza & Perimeter Sidewalks (Top strictly at Y = 0.03)
+    const plazaSlab = new THREE.Mesh(
+      new THREE.BoxGeometry(plotW - 0.16, Y_STONE_PLAZA, plotD - 0.16),
+      stonePlazaMat
+    );
+    plazaSlab.position.set(0, Y_STONE_PLAZA * 0.5, 0);
+    plazaSlab.receiveShadow = true;
+    bGroup.add(plazaSlab);
+
+    // Perimeter Sidewalk Border & Rounded Corner Curbs (Top at Y = 0.03)
+    const borderThick = 0.28;
+    for (const sideZ of [-1, 1]) {
+      const curbZ = new THREE.Mesh(
+        new THREE.BoxGeometry(plotW, Y_STONE_PLAZA, borderThick),
+        sidewalkCurbMat
+      );
+      curbZ.position.set(
+        0,
+        Y_STONE_PLAZA * 0.5,
+        sideZ * (plotD * 0.5 - borderThick * 0.5)
+      );
+      curbZ.receiveShadow = true;
+      bGroup.add(curbZ);
+    }
+    for (const sideX of [-1, 1]) {
+      const curbX = new THREE.Mesh(
+        new THREE.BoxGeometry(borderThick, Y_STONE_PLAZA, plotD - borderThick * 2),
+        sidewalkCurbMat
+      );
+      curbX.position.set(
+        sideX * (plotW * 0.5 - borderThick * 0.5),
+        Y_STONE_PLAZA * 0.5,
+        0
+      );
+      curbX.receiveShadow = true;
+      bGroup.add(curbX);
+    }
+
+    // Front (+Z) Road Integration Sidewalk & Driveway Transition Apron (Top at Y = 0.03)
+    // Bridges the 0.84m margin from the South edge of the 10x20 plot (gz=53, local Z=+20.0m)
+    // cleanly to the northern curb of road-city-west-approach (gz=55, local Z=+20.84m) with zero overlap!
+    const roadConnectorDepth = 0.82;
+    const roadConnectorApron = new THREE.Mesh(
+      new THREE.BoxGeometry(plotW - 1.2, Y_STONE_PLAZA, roadConnectorDepth),
+      stonePlazaMat
+    );
+    roadConnectorApron.position.set(
+      0.4,
+      Y_STONE_PLAZA * 0.5,
+      plotD * 0.5 + roadConnectorDepth * 0.5
+    );
+    roadConnectorApron.receiveShadow = true;
+    bGroup.add(roadConnectorApron);
+
+    // Layer 0.02: Landscaped Rectangular Manicured Grass Lawn Beds (Top strictly at Y = 0.02)
+    // Placed inside crisp stone-curbed recesses bordered by low trimmed boxwood hedges
+    const lawnBeds: Array<{
+      x: number;
+      z: number;
+      w: number;
+      d: number;
+      hasHedge: boolean;
+    }> = [
+      // 1. Front-Center / South-West Grand Manicured Lawn (prominent foreground lawn in reference image)
+      { x: -2.2, z: 12.8, w: 7.4, d: 9.2, hasHedge: true },
+      // 2. West Flank Landscaped Garden Bed alongside main block
+      { x: -7.5, z: -3.2, w: 3.0, d: 16.4, hasHedge: true },
+      // 3. East Flank Front Garden Bed in front of the 2-story side wing
+      { x: 5.5, z: 12.6, w: 5.2, d: 8.6, hasHedge: true },
+      // 4. Inner L-Courtyard Accent Planter Bed beside the CTH portico
+      { x: 1.5, z: 4.4, w: 2.6, d: 3.4, hasHedge: true },
+      // 5. Rear-East Landscaped Corner Lawn Bed
+      { x: 6.4, z: -13.6, w: 4.2, d: 8.4, hasHedge: true },
+    ];
+
+    const hedgeThickness = 0.34;
+    const hedgeHeight = 0.42;
+
+    for (const bed of lawnBeds) {
+      // Cutout recess frame so the Y = 0.02 lawn bed is visibly revealed and framed by stone edging
+      const lawnMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(bed.w, Y_LAWN_BEDS, bed.d),
+        manicuredLawnMat
+      );
+      // Positioned so top surface of lawn bed is at Y = 0.032 (0.02m above base plaza recess)
+      lawnMesh.position.set(bed.x, Y_STONE_PLAZA + Y_LAWN_BEDS * 0.5, bed.z);
+      lawnMesh.receiveShadow = true;
+      bGroup.add(lawnMesh);
+
+      if (bed.hasHedge) {
+        // Low trimmed boxwood hedges around all 4 sides of the rectangular lawn bed
+        const hNorth = new THREE.Mesh(
+          new THREE.BoxGeometry(bed.w + 0.08, hedgeHeight, hedgeThickness),
+          boxwoodHedgeMat
+        );
+        hNorth.position.set(
+          bed.x,
+          Y_STONE_PLAZA + Y_LAWN_BEDS + hedgeHeight * 0.5,
+          bed.z - bed.d * 0.5 + hedgeThickness * 0.5
+        );
+        hNorth.castShadow = true;
+        hNorth.receiveShadow = true;
+        bGroup.add(hNorth);
+
+        const hSouth = new THREE.Mesh(
+          new THREE.BoxGeometry(bed.w + 0.08, hedgeHeight, hedgeThickness),
+          boxwoodHedgeMat
+        );
+        hSouth.position.set(
+          bed.x,
+          Y_STONE_PLAZA + Y_LAWN_BEDS + hedgeHeight * 0.5,
+          bed.z + bed.d * 0.5 - hedgeThickness * 0.5
+        );
+        hSouth.castShadow = true;
+        hSouth.receiveShadow = true;
+        bGroup.add(hSouth);
+
+        const hWest = new THREE.Mesh(
+          new THREE.BoxGeometry(
+            hedgeThickness,
+            hedgeHeight,
+            bed.d - hedgeThickness * 2
+          ),
+          boxwoodHedgeMat
+        );
+        hWest.position.set(
+          bed.x - bed.w * 0.5 + hedgeThickness * 0.5,
+          Y_STONE_PLAZA + Y_LAWN_BEDS + hedgeHeight * 0.5,
+          bed.z
+        );
+        hWest.castShadow = true;
+        hWest.receiveShadow = true;
+        bGroup.add(hWest);
+
+        const hEast = new THREE.Mesh(
+          new THREE.BoxGeometry(
+            hedgeThickness,
+            hedgeHeight,
+            bed.d - hedgeThickness * 2
+          ),
+          boxwoodHedgeMat
+        );
+        hEast.position.set(
+          bed.x + bed.w * 0.5 - hedgeThickness * 0.5,
+          Y_STONE_PLAZA + Y_LAWN_BEDS + hedgeHeight * 0.5,
+          bed.z
+        );
+        hEast.castShadow = true;
+        hEast.receiveShadow = true;
+        bGroup.add(hEast);
+      }
+    }
+
+    // Layer 0.04: Building Foundation Plinth (Top strictly at Y = 0.04)
+    // L-shaped foundation plinth supporting the Main Corporate Block and 2-Story East Wing
+    const mainBlockCenterX = -0.8;
+    const mainBlockCenterZ = -7.8;
+    const mainBlockW = 10.4; // X: -6.0 .. +4.4
+    const mainBlockD = 18.4; // Z: -17.0 .. +1.4
+
+    const sideWingCenterX = 4.2;
+    const sideWingCenterZ = 1.6;
+    const sideWingW = 7.6; // X: +0.4 .. +8.0
+    const sideWingD = 11.6; // Z: -4.2 .. +7.4
+
+    const mainPlinth = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        mainBlockW + 0.6,
+        Y_FOUNDATION_PLINTH,
+        mainBlockD + 0.6
+      ),
+      plinthConcreteMat
+    );
+    mainPlinth.position.set(
+      mainBlockCenterX,
+      Y_FOUNDATION_PLINTH * 0.5,
+      mainBlockCenterZ
+    );
+    mainPlinth.receiveShadow = true;
+    bGroup.add(mainPlinth);
+
+    const wingPlinth = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        sideWingW + 0.6,
+        Y_FOUNDATION_PLINTH,
+        sideWingD + 0.6
+      ),
+      plinthConcreteMat
+    );
+    wingPlinth.position.set(
+      sideWingCenterX,
+      Y_FOUNDATION_PLINTH * 0.5,
+      sideWingCenterZ
+    );
+    wingPlinth.receiveShadow = true;
+    bGroup.add(wingPlinth);
+
+    // -------------------------------------------------------------------------
+    // 2. TIERED L-SHAPED GLASS & CONCRETE CORPORATE STRUCTURE
+    // -------------------------------------------------------------------------
+    const storyH = 2.55;
+    const slabH = 0.34;
+
+    // A. Main Corporate Block: 3 Full Lower Stories (Floors 1, 2, 3)
+    for (let fl = 0; fl < 3; fl++) {
+      const floorBaseY = Y_FOUNDATION_PLINTH + fl * storyH;
+
+      // Projecting horizontal white/light-grey concrete floor slab
+      const floorSlab = new THREE.Mesh(
+        new THREE.BoxGeometry(mainBlockW + 0.36, slabH, mainBlockD + 0.36),
+        concreteSlabMat
+      );
+      floorSlab.position.set(
+        mainBlockCenterX,
+        floorBaseY + slabH * 0.5,
+        mainBlockCenterZ
+      );
+      floorSlab.castShadow = true;
+      floorSlab.receiveShadow = true;
+      bGroup.add(floorSlab);
+
+      // Warm interior office core + floor plate visible through the glass curtain walls
+      const interiorCore = new THREE.Mesh(
+        new THREE.BoxGeometry(
+          mainBlockW - 1.6,
+          storyH - slabH - 0.12,
+          mainBlockD - 1.6
+        ),
+        warmInteriorMat
+      );
+      interiorCore.position.set(
+        mainBlockCenterX,
+        floorBaseY + slabH + (storyH - slabH) * 0.5,
+        mainBlockCenterZ
+      );
+      bGroup.add(interiorCore);
+
+      // Floor-to-ceiling tinted glass curtain wall enclosure
+      const glassShell = new THREE.Mesh(
+        new THREE.BoxGeometry(
+          mainBlockW,
+          storyH - slabH,
+          mainBlockD
+        ),
+        curtainGlassMat
+      );
+      glassShell.position.set(
+        mainBlockCenterX,
+        floorBaseY + slabH + (storyH - slabH) * 0.5,
+        mainBlockCenterZ
+      );
+      glassShell.castShadow = true;
+      bGroup.add(glassShell);
+    }
+
+    // Top cornice slab of Floor 3 (at Y = 0.04 + 3 * 2.55 = 7.69m)
+    const floor3TopY = Y_FOUNDATION_PLINTH + 3 * storyH;
+    const floor3RoofSlab = new THREE.Mesh(
+      new THREE.BoxGeometry(mainBlockW + 0.42, slabH, mainBlockD + 0.42),
+      concreteSlabMat
+    );
+    floor3RoofSlab.position.set(
+      mainBlockCenterX,
+      floor3TopY + slabH * 0.5,
+      mainBlockCenterZ
+    );
+    floor3RoofSlab.castShadow = true;
+    floor3RoofSlab.receiveShadow = true;
+    bGroup.add(floor3RoofSlab);
+
+    // B. Stepped 2-Story Side Wing (L-Shape East Projection: Floors 1 & 2)
+    for (let fl = 0; fl < 2; fl++) {
+      const floorBaseY = Y_FOUNDATION_PLINTH + fl * storyH;
+
+      const wingSlab = new THREE.Mesh(
+        new THREE.BoxGeometry(sideWingW + 0.36, slabH, sideWingD + 0.36),
+        concreteSlabMat
+      );
+      wingSlab.position.set(
+        sideWingCenterX,
+        floorBaseY + slabH * 0.5,
+        sideWingCenterZ
+      );
+      wingSlab.castShadow = true;
+      wingSlab.receiveShadow = true;
+      bGroup.add(wingSlab);
+
+      const wingInterior = new THREE.Mesh(
+        new THREE.BoxGeometry(
+          sideWingW - 1.5,
+          storyH - slabH - 0.12,
+          sideWingD - 1.5
+        ),
+        warmInteriorMat
+      );
+      wingInterior.position.set(
+        sideWingCenterX,
+        floorBaseY + slabH + (storyH - slabH) * 0.5,
+        sideWingCenterZ
+      );
+      bGroup.add(wingInterior);
+
+      const wingGlass = new THREE.Mesh(
+        new THREE.BoxGeometry(sideWingW, storyH - slabH, sideWingD),
+        curtainGlassMat
+      );
+      wingGlass.position.set(
+        sideWingCenterX,
+        floorBaseY + slabH + (storyH - slabH) * 0.5,
+        sideWingCenterZ
+      );
+      wingGlass.castShadow = true;
+      bGroup.add(wingGlass);
+    }
+
+    // 2-Story Side Wing Roof Terrace Slab (at Y = 0.04 + 2 * 2.55 = 5.14m)
+    const wingRoofY = Y_FOUNDATION_PLINTH + 2 * storyH;
+    const wingRoofSlab = new THREE.Mesh(
+      new THREE.BoxGeometry(sideWingW + 0.42, slabH, sideWingD + 0.42),
+      concreteSlabMat
+    );
+    wingRoofSlab.position.set(
+      sideWingCenterX,
+      wingRoofY + slabH * 0.5,
+      sideWingCenterZ
+    );
+    wingRoofSlab.castShadow = true;
+    wingRoofSlab.receiveShadow = true;
+    bGroup.add(wingRoofSlab);
+
+    // Glass Safety Balustrade & Rooftop Garden Planters on the 2-Story Side Wing Terrace
+    const wingTerraceTopY = wingRoofY + slabH;
+    const railH = 0.72;
+    const wingRailFront = new THREE.Mesh(
+      new THREE.BoxGeometry(sideWingW + 0.2, railH, 0.08),
+      balustradeGlassMat
+    );
+    wingRailFront.position.set(
+      sideWingCenterX,
+      wingTerraceTopY + railH * 0.5,
+      sideWingCenterZ + sideWingD * 0.5
+    );
+    bGroup.add(wingRailFront);
+
+    const wingRailEast = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, railH, sideWingD + 0.2),
+      balustradeGlassMat
+    );
+    wingRailEast.position.set(
+      sideWingCenterX + sideWingW * 0.5,
+      wingTerraceTopY + railH * 0.5,
+      sideWingCenterZ
+    );
+    bGroup.add(wingRailEast);
+
+    // 4 Manicured Green Rooftop Garden Planters on the 2-Story Side Wing Roof Terrace
+    const wingPlanterCoords: Array<[number, number, number, number]> = [
+      [5.4, 3.6, 2.2, 2.8],
+      [5.4, 0.0, 2.2, 2.8],
+      [2.6, 4.6, 2.0, 2.2],
+      [2.6, 1.4, 2.0, 2.2],
+    ];
+    for (const [px, pz, pw, pd] of wingPlanterCoords) {
+      const planterBox = new THREE.Mesh(
+        new THREE.BoxGeometry(pw, 0.34, pd),
+        concreteSpandrelMat
+      );
+      planterBox.position.set(px, wingTerraceTopY + 0.17, pz);
+      bGroup.add(planterBox);
+
+      const planterGreenery = new THREE.Mesh(
+        new THREE.BoxGeometry(pw - 0.24, 0.32, pd - 0.24),
+        boxwoodHedgeMat
+      );
+      planterGreenery.position.set(px, wingTerraceTopY + 0.42, pz);
+      bGroup.add(planterGreenery);
+    }
+
+    // C. 4th Story Stepped Upper Corporate Level + Solar Panel & Garden Terraces
+    const floor4BaseY = floor3TopY + slabH;
+    const floor4W = 6.6;
+    const floor4D = 13.8;
+    const floor4CenterX = 0.8; // Set back on the West side to leave room for the Solar Panel Terrace!
+    const floor4CenterZ = -8.4;
+
+    const floor4Interior = new THREE.Mesh(
+      new THREE.BoxGeometry(floor4W - 1.2, storyH - slabH - 0.1, floor4D - 1.2),
+      warmInteriorMat
+    );
+    floor4Interior.position.set(
+      floor4CenterX,
+      floor4BaseY + (storyH - slabH) * 0.5,
+      floor4CenterZ
+    );
+    bGroup.add(floor4Interior);
+
+    const floor4Glass = new THREE.Mesh(
+      new THREE.BoxGeometry(floor4W, storyH - slabH, floor4D),
+      curtainGlassMat
+    );
+    floor4Glass.position.set(
+      floor4CenterX,
+      floor4BaseY + (storyH - slabH) * 0.5,
+      floor4CenterZ
+    );
+    floor4Glass.castShadow = true;
+    bGroup.add(floor4Glass);
+
+    const floor4RoofY = floor4BaseY + (storyH - slabH);
+    const floor4RoofSlab = new THREE.Mesh(
+      new THREE.BoxGeometry(floor4W + 0.4, slabH, floor4D + 0.4),
+      concreteSlabMat
+    );
+    floor4RoofSlab.position.set(
+      floor4CenterX,
+      floor4RoofY + slabH * 0.5,
+      floor4CenterZ
+    );
+    floor4RoofSlab.castShadow = true;
+    floor4RoofSlab.receiveShadow = true;
+    bGroup.add(floor4RoofSlab);
+
+    // Glass safety balustrade around the 3rd-floor stepped terrace (Y = floor4BaseY)
+    const terrace3RailWest = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, railH, mainBlockD + 0.2),
+      balustradeGlassMat
+    );
+    terrace3RailWest.position.set(
+      mainBlockCenterX - mainBlockW * 0.5,
+      floor4BaseY + railH * 0.5,
+      mainBlockCenterZ
+    );
+    bGroup.add(terrace3RailWest);
+
+    const terrace3RailFront = new THREE.Mesh(
+      new THREE.BoxGeometry(mainBlockW + 0.2, railH, 0.08),
+      balustradeGlassMat
+    );
+    terrace3RailFront.position.set(
+      mainBlockCenterX,
+      floor4BaseY + railH * 0.5,
+      mainBlockCenterZ + mainBlockD * 0.5
+    );
+    bGroup.add(terrace3RailFront);
+
+    // Angled Solar Panel Array on the 3rd-floor stepped terrace (matching reference image!)
+    const solarPlinthW = 2.8;
+    const solarPlinthD = 7.4;
+    const solarPlinthH = 0.72;
+    const solarPlinthX = -4.2;
+    const solarPlinthZ = -6.2;
+
+    const solarHousing = new THREE.Mesh(
+      new THREE.BoxGeometry(solarPlinthW, solarPlinthH, solarPlinthD),
+      concreteSpandrelMat
+    );
+    solarHousing.position.set(
+      solarPlinthX,
+      floor4BaseY + solarPlinthH * 0.5,
+      solarPlinthZ
+    );
+    solarHousing.castShadow = true;
+    bGroup.add(solarHousing);
+
+    const solarMat = new THREE.MeshStandardMaterial({
+      map: solarPanelTex,
+      color: 0xffffff,
+      roughness: 0.18,
+      metalness: 0.65,
+    });
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 2; col++) {
+        const panelMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(1.18, 0.06, 1.62),
+          solarMat
+        );
+        panelMesh.position.set(
+          solarPlinthX + (col - 0.5) * 1.26,
+          floor4BaseY + solarPlinthH + 0.16 + col * 0.12,
+          solarPlinthZ + (row - 1.5) * 1.74
+        );
+        panelMesh.rotation.z = -0.22; // Angled toward sunlight
+        panelMesh.castShadow = true;
+        bGroup.add(panelMesh);
+      }
+    }
+
+    // Green Rooftop Garden Planters bordering the Solar Panel Terrace & 4th-Floor Setback
+    const upperTerracePlanters: Array<[number, number, number, number]> = [
+      [-4.2, -0.4, 2.6, 2.2],
+      [-1.0, -0.2, 2.8, 1.8],
+      [-4.4, -12.6, 2.2, 3.6],
+      [1.8, -16.0, 3.2, 1.4],
+    ];
+    for (const [px, pz, pw, pd] of upperTerracePlanters) {
+      const pBox = new THREE.Mesh(
+        new THREE.BoxGeometry(pw, 0.3, pd),
+        concreteSpandrelMat
+      );
+      pBox.position.set(px, floor4BaseY + 0.15, pz);
+      bGroup.add(pBox);
+
+      const pBush = new THREE.Mesh(
+        new THREE.BoxGeometry(pw - 0.2, 0.32, pd - 0.2),
+        boxwoodHedgeMat
+      );
+      pBush.position.set(px, floor4BaseY + 0.38, pz);
+      bGroup.add(pBush);
+    }
+
+    // D. Topmost Roof (5th Level): Circular Helipad ("H") Deck & Antenna Spire
+    const topRoofY = floor4RoofY + slabH;
+    const helipadDeckSize = 5.8;
+    const helipadBase = new THREE.Mesh(
+      new THREE.BoxGeometry(helipadDeckSize + 0.5, 0.24, helipadDeckSize + 0.5),
+      concreteSpandrelMat
+    );
+    helipadBase.position.set(
+      floor4CenterX,
+      topRoofY + 0.12,
+      floor4CenterZ + 1.2
+    );
+    helipadBase.castShadow = true;
+    bGroup.add(helipadBase);
+
+    const helipadMat = new THREE.MeshStandardMaterial({
+      map: helipadTex,
+      color: 0xffffff,
+      roughness: 0.45,
+      metalness: 0.15,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+    const helipadSurface = new THREE.Mesh(
+      new THREE.BoxGeometry(helipadDeckSize, 0.08, helipadDeckSize),
+      helipadMat
+    );
+    helipadSurface.position.set(
+      floor4CenterX,
+      topRoofY + 0.26,
+      floor4CenterZ + 1.2
+    );
+    bGroup.add(helipadSurface);
+
+    // 8 Perimeter Green Helipad Safety Lights
+    const heliLightMat = new THREE.MeshStandardMaterial({
+      color: 0x34d399,
+      emissive: 0x10b981,
+      emissiveIntensity: 0.85,
+      roughness: 0.2,
+    });
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2;
+      const lx = floor4CenterX + Math.cos(ang) * (helipadDeckSize * 0.44);
+      const lz = floor4CenterZ + 1.2 + Math.sin(ang) * (helipadDeckSize * 0.44);
+      const lightDot = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.1, 0.12, 0.08, 8),
+        heliLightMat
+      );
+      lightDot.position.set(lx, topRoofY + 0.32, lz);
+      bGroup.add(lightDot);
+    }
+
+    // Subtle Antenna Spire at the rear of the topmost roof
+    const spireBaseX = floor4CenterX - 1.2;
+    const spireBaseZ = floor4CenterZ - 5.2;
+    const spireMast = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.12, 4.2, 10),
+      mullionMetalMat
+    );
+    spireMast.position.set(spireBaseX, topRoofY + 2.1, spireBaseZ);
+    spireMast.castShadow = true;
+    bGroup.add(spireMast);
+
+    const spireBeacon = new THREE.Mesh(
+      new THREE.SphereGeometry(0.11, 10, 10),
+      new THREE.MeshBasicMaterial({ color: 0xef4444 })
+    );
+    spireBeacon.position.set(spireBaseX, topRoofY + 4.22, spireBaseZ);
+    bGroup.add(spireBeacon);
+
+    // -------------------------------------------------------------------------
+    // 3. MAIN ENTRANCE PORTICO & ILLUMINATED "CTH / GTE" CORPORATE SIGNAGE
+    // -------------------------------------------------------------------------
+    const porticoX = -1.8;
+    const porticoZ = mainBlockCenterZ + mainBlockD * 0.5 + 1.25; // Z = +2.65m (projecting onto front plaza)
+    const porticoW = 3.8;
+    const porticoH = 2.95;
+    const porticoD = 2.5;
+
+    // 3 Wide Architectural Stone Steps leading up to the Portico
+    for (let st = 0; st < 3; st++) {
+      const stepW = porticoW + 0.4 - st * 0.16;
+      const stepD = 0.55;
+      const stepMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(stepW, 0.06, stepD),
+        concreteSlabMat
+      );
+      stepMesh.position.set(
+        porticoX,
+        Y_FOUNDATION_PLINTH + st * 0.05,
+        porticoZ + porticoD * 0.5 + 0.45 - st * 0.22
+      );
+      bGroup.add(stepMesh);
+    }
+
+    // Left & Right Sculptural Concrete Portico Piers + Overhead Canopy Fascia
+    for (const side of [-1, 1]) {
+      const pier = new THREE.Mesh(
+        new THREE.BoxGeometry(0.42, porticoH, porticoD),
+        concreteSlabMat
+      );
+      pier.position.set(
+        porticoX + side * (porticoW * 0.5 - 0.21),
+        Y_FOUNDATION_PLINTH + porticoH * 0.5,
+        porticoZ
+      );
+      pier.castShadow = true;
+      pier.receiveShadow = true;
+      bGroup.add(pier);
+    }
+
+    const porticoCanopy = new THREE.Mesh(
+      new THREE.BoxGeometry(porticoW + 0.16, 0.52, porticoD + 0.16),
+      concreteSlabMat
+    );
+    porticoCanopy.position.set(
+      porticoX,
+      Y_FOUNDATION_PLINTH + porticoH - 0.18,
+      porticoZ
+    );
+    porticoCanopy.castShadow = true;
+    bGroup.add(porticoCanopy);
+
+    // Glass Revolving / Sliding Entrance Doors & Warm Illuminated Lobby Backdrop
+    const lobbyBackdrop = new THREE.Mesh(
+      new THREE.BoxGeometry(porticoW - 0.88, porticoH - 0.55, 0.35),
+      warmInteriorMat
+    );
+    lobbyBackdrop.position.set(
+      porticoX,
+      Y_FOUNDATION_PLINTH + (porticoH - 0.55) * 0.5,
+      porticoZ - 0.45
+    );
+    bGroup.add(lobbyBackdrop);
+
+    const entranceGlassDoors = new THREE.Mesh(
+      new THREE.BoxGeometry(porticoW - 0.86, porticoH - 0.52, 0.12),
+      curtainGlassMat
+    );
+    entranceGlassDoors.position.set(
+      porticoX,
+      Y_FOUNDATION_PLINTH + (porticoH - 0.52) * 0.5,
+      porticoZ - 0.15
+    );
+    bGroup.add(entranceGlassDoors);
+
+    // Illuminated "CTH / GTE" Corporate Signage Board above Portico Canopy
+    const signBoardMat = new THREE.MeshStandardMaterial({
+      map: hqSignTex,
+      color: 0xffffff,
+      roughness: 0.25,
+      metalness: 0.1,
+      emissive: 0xffffff,
+      emissiveMap: hqSignTex,
+      emissiveIntensity: 0.22,
+    });
+    const signBoard = new THREE.Mesh(
+      new THREE.BoxGeometry(2.65, 0.82, 0.18),
+      signBoardMat
+    );
+    signBoard.position.set(
+      porticoX,
+      Y_FOUNDATION_PLINTH + porticoH + 0.42,
+      porticoZ + porticoD * 0.5 - 0.08
+    );
+    signBoard.castShadow = true;
+    bGroup.add(signBoard);
+
+    // -------------------------------------------------------------------------
+    // 4. INSTANCED CURTAIN-WALL WINDOW MULLIONS (THREE.InstancedMesh)
+    // -------------------------------------------------------------------------
+    const mullionTransforms: Array<{
+      x: number;
+      y: number;
+      z: number;
+      sx: number;
+      sy: number;
+      sz: number;
+    }> = [];
+
+    const mainLowerH = 3 * storyH;
+    // Vertical mullions along West & East facades of Main Block
+    for (let z = -16.2; z <= 0.8; z += 1.7) {
+      for (const side of [-1, 1]) {
+        mullionTransforms.push({
+          x: mainBlockCenterX + side * (mainBlockW * 0.5 + 0.03),
+          y: Y_FOUNDATION_PLINTH + mainLowerH * 0.5,
+          z,
+          sx: 0.07,
+          sy: mainLowerH,
+          sz: 0.09,
+        });
+      }
+    }
+    // Vertical mullions along North & South facades of Main Block
+    for (let x = -5.4; x <= 3.8; x += 1.55) {
+      for (const side of [-1, 1]) {
+        mullionTransforms.push({
+          x,
+          y: Y_FOUNDATION_PLINTH + mainLowerH * 0.5,
+          z: mainBlockCenterZ + side * (mainBlockD * 0.5 + 0.03),
+          sx: 0.09,
+          sy: mainLowerH,
+          sz: 0.07,
+        });
+      }
+    }
+    // Vertical mullions along 2-Story Side Wing
+    const wingTotalH = 2 * storyH;
+    for (let z = -3.4; z <= 6.8; z += 1.7) {
+      mullionTransforms.push({
+        x: sideWingCenterX + sideWingW * 0.5 + 0.03,
+        y: Y_FOUNDATION_PLINTH + wingTotalH * 0.5,
+        z,
+        sx: 0.07,
+        sy: wingTotalH,
+        sz: 0.09,
+      });
+    }
+    for (let x = 1.0; x <= 7.4; x += 1.6) {
+      mullionTransforms.push({
+        x,
+        y: Y_FOUNDATION_PLINTH + wingTotalH * 0.5,
+        z: sideWingCenterZ + sideWingD * 0.5 + 0.03,
+        sx: 0.09,
+        sy: wingTotalH,
+        sz: 0.07,
+      });
+    }
+    // Vertical mullions along 4th-Story Executive Level
+    const fl4H = storyH - slabH;
+    for (let z = -14.8; z <= -1.8; z += 1.85) {
+      for (const side of [-1, 1]) {
+        mullionTransforms.push({
+          x: floor4CenterX + side * (floor4W * 0.5 + 0.03),
+          y: floor4BaseY + fl4H * 0.5,
+          z,
+          sx: 0.07,
+          sy: fl4H,
+          sz: 0.09,
+        });
+      }
+    }
+
+    const unitBoxGeo = new THREE.BoxGeometry(1, 1, 1);
+    const mullionInstanced = new THREE.InstancedMesh(
+      unitBoxGeo,
+      mullionMetalMat,
+      mullionTransforms.length
+    );
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < mullionTransforms.length; i++) {
+      const m = mullionTransforms[i];
+      dummy.position.set(m.x, m.y, m.z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(m.sx, m.sy, m.sz);
+      dummy.updateMatrix();
+      mullionInstanced.setMatrixAt(i, dummy.matrix);
+    }
+    mullionInstanced.instanceMatrix.needsUpdate = true;
+    mullionInstanced.computeBoundingSphere();
+    bGroup.add(mullionInstanced);
+
+    // -------------------------------------------------------------------------
+    // 5. MANICURED PLAZA LANDSCAPING: INSTANCED TREES, SHRUBS, BENCHES & STREETLAMPS
+    // -------------------------------------------------------------------------
+    // A. Tall Slender Cypress Tree right beside the left pillar of the CTH Entrance Portico (as in reference image!)
+    const cypressTrunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.12, 0.65, 8),
+      this.materials.timberSleeper
+    );
+    cypressTrunk.position.set(
+      porticoX - porticoW * 0.5 - 0.35,
+      Y_STONE_PLAZA + 0.32,
+      porticoZ + 0.9
+    );
+    bGroup.add(cypressTrunk);
+
+    const cypressCone = new THREE.Mesh(
+      new THREE.ConeGeometry(0.46, 2.75, 10),
+      boxwoodHedgeMat
+    );
+    cypressCone.position.set(
+      porticoX - porticoW * 0.5 - 0.35,
+      Y_STONE_PLAZA + 1.85,
+      porticoZ + 0.9
+    );
+    cypressCone.castShadow = true;
+    bGroup.add(cypressCone);
+
+    // B. 4 Potted Ornamental Shrubs in Cylindrical Stone Planters along the Front Plaza Walk
+    const pottedLocations: Array<[number, number]> = [
+      [-0.6, 5.4],
+      [-3.4, 5.4],
+      [2.6, 8.8],
+      [-5.6, 7.6],
+    ];
+    for (const [px, pz] of pottedLocations) {
+      const pot = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.36, 0.28, 0.44, 12),
+        concreteSpandrelMat
+      );
+      pot.position.set(px, Y_STONE_PLAZA + 0.22, pz);
+      pot.castShadow = true;
+      bGroup.add(pot);
+
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.07, 0.45, 6),
+        this.materials.timberSleeper
+      );
+      stem.position.set(px, Y_STONE_PLAZA + 0.58, pz);
+      bGroup.add(stem);
+
+      const crown = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.48, 1),
+        boxwoodHedgeMat
+      );
+      crown.position.set(px, Y_STONE_PLAZA + 0.98, pz);
+      crown.castShadow = true;
+      bGroup.add(crown);
+    }
+
+    // C. Colorful Accent Flowering Shrubs in the Inner Courtyard & Side Gardens (Crimson & Lavender-White)
+    const crimsonShrubMat = new THREE.MeshStandardMaterial({
+      color: 0xbe123c,
+      roughness: 0.8,
+      metalness: 0.04,
+    });
+    const lavenderShrubMat = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0,
+      roughness: 0.78,
+      metalness: 0.04,
+    });
+    const accentShrubs: Array<{
+      x: number;
+      z: number;
+      r: number;
+      mat: THREE.Material;
+    }> = [
+      { x: 1.2, z: 3.6, r: 0.52, mat: crimsonShrubMat },
+      { x: 1.9, z: 4.8, r: 0.42, mat: boxwoodHedgeMat },
+      { x: 4.8, z: 9.8, r: 0.55, mat: lavenderShrubMat },
+      { x: -7.5, z: 1.6, r: 0.48, mat: crimsonShrubMat },
+      { x: -7.4, z: -0.6, r: 0.44, mat: lavenderShrubMat },
+    ];
+    for (const sh of accentShrubs) {
+      const bush = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(sh.r, 1),
+        sh.mat
+      );
+      bush.scale.set(1.1, 0.78, 1.1);
+      bush.position.set(sh.x, Y_STONE_PLAZA + Y_LAWN_BEDS + sh.r * 0.65, sh.z);
+      bush.castShadow = true;
+      bGroup.add(bush);
+    }
+
+    // D. Broadleaf Specimen Plaza Trees (Multi-cluster canopies via InstancedMesh + trunks)
+    const treePlacements: Array<{ x: number; z: number; scale: number }> = [
+      // Front-Center Grand Lawn Specimen Tree (prominent front tree in reference image)
+      { x: -2.2, z: 11.4, scale: 1.25 },
+      // West Garden Bed Shade Trees
+      { x: -7.5, z: -2.2, scale: 1.32 },
+      { x: -7.5, z: -9.8, scale: 1.15 },
+      // East Wing Garden Specimen Tree (large right-side tree in reference image)
+      { x: 6.4, z: 12.2, scale: 1.35 },
+      { x: 6.4, z: -12.8, scale: 1.18 },
+      // Rear & Perimeter Corner Trees
+      { x: -7.6, z: -16.6, scale: 1.1 },
+      { x: 2.2, z: -18.2, scale: 1.08 },
+    ];
+
+    const canopyOffsets: Array<[number, number, number, number]> = [
+      [0, 2.35, 0, 1.15],
+      [-0.55, 2.05, 0.42, 0.88],
+      [0.58, 2.1, -0.38, 0.9],
+      [0.12, 2.78, 0.24, 0.85],
+      [-0.38, 1.95, -0.48, 0.82],
+    ];
+
+    const canopyGeo = new THREE.DodecahedronGeometry(0.95, 1);
+    const canopyMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.82,
+      metalness: 0.03,
+    });
+    const totalCanopySpheres = treePlacements.length * canopyOffsets.length;
+    const canopyInstanced = new THREE.InstancedMesh(
+      canopyGeo,
+      canopyMat,
+      totalCanopySpheres
+    );
+    canopyInstanced.castShadow = true;
+    canopyInstanced.receiveShadow = true;
+
+    const paletteHex = [0x4d7c3f, 0x3f6a34, 0x5c8d49, 0x457439, 0x659652];
+    const tmpColor = new THREE.Color();
+    let cIdx = 0;
+
+    for (const tp of treePlacements) {
+      const trunkH = 1.65 * tp.scale;
+      const trunkMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          0.14 * tp.scale,
+          0.22 * tp.scale,
+          trunkH,
+          8
+        ),
+        this.materials.timberSleeper
+      );
+      trunkMesh.position.set(
+        tp.x,
+        Y_STONE_PLAZA + Y_LAWN_BEDS + trunkH * 0.5,
+        tp.z
+      );
+      trunkMesh.castShadow = true;
+      bGroup.add(trunkMesh);
+
+      for (let k = 0; k < canopyOffsets.length; k++) {
+        const [ox, oy, oz, radScale] = canopyOffsets[k];
+        dummy.position.set(
+          tp.x + ox * tp.scale,
+          Y_STONE_PLAZA + Y_LAWN_BEDS + oy * tp.scale,
+          tp.z + oz * tp.scale
+        );
+        dummy.rotation.set(k * 0.4, k * 0.9, 0);
+        dummy.scale.setScalar(radScale * tp.scale);
+        dummy.updateMatrix();
+        canopyInstanced.setMatrixAt(cIdx, dummy.matrix);
+        tmpColor.setHex(paletteHex[(cIdx + k) % paletteHex.length]);
+        canopyInstanced.setColorAt(cIdx, tmpColor);
+        cIdx++;
+      }
+    }
+    canopyInstanced.instanceMatrix.needsUpdate = true;
+    if (canopyInstanced.instanceColor) {
+      canopyInstanced.instanceColor.needsUpdate = true;
+    }
+    canopyInstanced.computeBoundingSphere();
+    bGroup.add(canopyInstanced);
+
+    // E. 8 Modern Wooden & Dark-Metal Park Benches along the Plaza Walkways
+    const benchSpecs: Array<{ x: number; z: number; rotY: number }> = [
+      { x: -1.2, z: 7.6, rotY: 0 },
+      { x: -3.4, z: 7.6, rotY: 0 },
+      { x: -6.4, z: 10.6, rotY: Math.PI * 0.5 },
+      { x: -6.4, z: 14.2, rotY: Math.PI * 0.5 },
+      { x: 2.2, z: 11.4, rotY: -Math.PI * 0.5 },
+      { x: 2.2, z: 14.8, rotY: -Math.PI * 0.5 },
+      { x: -5.5, z: 3.2, rotY: Math.PI * 0.5 },
+      { x: -5.5, z: 0.4, rotY: Math.PI * 0.5 },
+    ];
+    for (const b of benchSpecs) {
+      const benchGroup = new THREE.Group();
+      benchGroup.position.set(b.x, Y_STONE_PLAZA, b.z);
+      benchGroup.rotation.y = b.rotY;
+
+      const seat = new THREE.Mesh(
+        new THREE.BoxGeometry(1.25, 0.08, 0.42),
+        benchWoodMat
+      );
+      seat.position.set(0, 0.32, 0);
+      seat.castShadow = true;
+      benchGroup.add(seat);
+
+      const backrest = new THREE.Mesh(
+        new THREE.BoxGeometry(1.25, 0.28, 0.07),
+        benchWoodMat
+      );
+      backrest.position.set(0, 0.5, -0.17);
+      backrest.rotation.x = -0.15;
+      benchGroup.add(backrest);
+
+      for (const lx of [-0.52, 0.52]) {
+        const leg = new THREE.Mesh(
+          new THREE.BoxGeometry(0.08, 0.34, 0.4),
+          darkMetalMat
+        );
+        leg.position.set(lx, 0.17, 0);
+        benchGroup.add(leg);
+      }
+      bGroup.add(benchGroup);
+    }
+
+    // F. 8 Slim Modern Architectural Streetlamps around the Plaza & Walkways
+    const lampSpecs: Array<{ x: number; z: number; rotY: number }> = [
+      { x: -2.2, z: 17.8, rotY: Math.PI },
+      { x: 2.2, z: 17.8, rotY: Math.PI },
+      { x: 8.6, z: 16.5, rotY: -Math.PI * 0.5 },
+      { x: 8.6, z: 5.5, rotY: -Math.PI * 0.5 },
+      { x: -9.2, z: 15.5, rotY: 0 },
+      { x: -9.2, z: 4.5, rotY: 0 },
+      { x: -9.2, z: -7.5, rotY: 0 },
+      { x: 1.8, z: 7.4, rotY: -Math.PI * 0.5 },
+    ];
+    const lampGlowMat = new THREE.MeshStandardMaterial({
+      color: 0xfef3c7,
+      emissive: 0xfde047,
+      emissiveIntensity: 0.75,
+      roughness: 0.2,
+    });
+    for (const lp of lampSpecs) {
+      const lampGroup = new THREE.Group();
+      lampGroup.position.set(lp.x, Y_STONE_PLAZA, lp.z);
+      lampGroup.rotation.y = lp.rotY;
+
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.06, 3.1, 8),
+        darkMetalMat
+      );
+      pole.position.set(0, 1.55, 0);
+      pole.castShadow = true;
+      lampGroup.add(pole);
+
+      const arm = new THREE.Mesh(
+        new THREE.BoxGeometry(0.55, 0.05, 0.08),
+        darkMetalMat
+      );
+      arm.position.set(0.24, 3.08, 0);
+      lampGroup.add(arm);
+
+      const bulb = new THREE.Mesh(
+        new THREE.BoxGeometry(0.32, 0.04, 0.12),
+        lampGlowMat
+      );
+      bulb.position.set(0.34, 3.04, 0);
+      lampGroup.add(bulb);
+
+      bGroup.add(lampGroup);
     }
   }
 
@@ -12491,10 +13736,10 @@ export class WorldRenderer {
         break;
       }
       case 'CITY_ROUNDABOUT': {
-        const p = this.world.grid.gridToWorld(86, 55);
-        this.desiredTarget.set(p.x, 1.2, p.z);
-        this.desiredRadius = 68;
-        this.desiredAzimuth = Math.PI * 0.22;
+        const p = this.world.grid.gridToWorld(75, 44);
+        this.desiredTarget.set(p.x, 3.8, p.z);
+        this.desiredRadius = 46;
+        this.desiredAzimuth = -Math.PI * 0.22;
         this.desiredPolar = Math.PI * 0.29;
         break;
       }

@@ -86,6 +86,7 @@ import {
 import {
   BUILDING_CATALOGUE,
   BuildingCatalogueItem,
+  DELIVERY_HQ_FOOTPRINT_SPEC,
   FLEET_LIVERIES,
   getBuildingSpecById,
   getLevelInfoForXp,
@@ -553,13 +554,13 @@ export class EconomyAndSimulationSystem {
       gz: number;
       orientation?: 0 | 90 | 180 | 270;
     }> = [
-      // Core Facility #2: Delivery Headquarters (5 x 7 grid blocks = 10m x 14m at gx 78..82, gz 44..50)
+      // Core Facility #2: Delivery Headquarters (10 x 20 grid blocks = 20m x 40m at gx 70..79, gz 34..53)
       {
-        id: 'building-city-hq-tower',
-        catalogueId: 'bld-com-financial-tower',
-        name: 'Delivery Headquarters',
-        gx: 78,
-        gz: 44,
+        id: DELIVERY_HQ_FOOTPRINT_SPEC.id,
+        catalogueId: DELIVERY_HQ_FOOTPRINT_SPEC.catalogueId,
+        name: DELIVERY_HQ_FOOTPRINT_SPEC.name,
+        gx: DELIVERY_HQ_FOOTPRINT_SPEC.gx,
+        gz: DELIVERY_HQ_FOOTPRINT_SPEC.gz,
       },
       // Core Facility #1 (Port Terminal Warehouse inside Port Reserved Zone gx 82..98, gz 88..98)
       {
@@ -574,6 +575,7 @@ export class EconomyAndSimulationSystem {
     for (const item of preplacedSpecs) {
       const catSpec = getBuildingSpecById(item.catalogueId);
       if (!catSpec) continue;
+      const isDeliveryHq = item.id === DELIVERY_HQ_FOOTPRINT_SPEC.id;
       const rec: PlacedBuildingRecord = {
         id: item.id,
         catalogueId: catSpec.id,
@@ -581,11 +583,15 @@ export class EconomyAndSimulationSystem {
         category: catSpec.category,
         gx: item.gx,
         gz: item.gz,
-        widthCells: catSpec.widthCells,
-        depthCells: catSpec.depthCells,
+        widthCells: isDeliveryHq
+          ? DELIVERY_HQ_FOOTPRINT_SPEC.widthCells
+          : catSpec.widthCells,
+        depthCells: isDeliveryHq
+          ? DELIVERY_HQ_FOOTPRINT_SPEC.depthCells
+          : catSpec.depthCells,
         orientation: item.orientation ?? 0,
         level: 1,
-        maxLevel: 3,
+        maxLevel: isDeliveryHq ? DELIVERY_HQ_FOOTPRINT_SPEC.maxLevel : 3,
         storageCapacityTons: catSpec.storageCapacityTons,
         storedCargoTons: Math.round(catSpec.storageCapacityTons * 0.4),
         vehicleSlotCapacity: catSpec.vehicleSlotCapacity,
@@ -1771,7 +1777,10 @@ export class EconomyAndSimulationSystem {
       };
     }
     const reqLevel = bld.level + 1;
-    if (this.level < reqLevel) {
+    if (
+      bld.id !== DELIVERY_HQ_FOOTPRINT_SPEC.id &&
+      this.level < reqLevel
+    ) {
       return {
         success: false,
         reason: `Upgrading ${bld.name} to Level ${reqLevel} requires Player Level ${reqLevel}.`,
@@ -4878,12 +4887,12 @@ export class EconomyAndSimulationSystem {
       },
       {
         key: 'DELIVERY_HEADQUARTERS',
-        id: hq?.id ?? 'building-city-hq-tower',
-        name: hq?.name ?? 'Delivery Headquarters',
-        gx: hq?.gx ?? 78,
-        gz: hq?.gz ?? 44,
-        widthCells: hq?.widthCells ?? 5,
-        depthCells: hq?.depthCells ?? 7,
+        id: hq?.id ?? DELIVERY_HQ_FOOTPRINT_SPEC.id,
+        name: hq?.name ?? DELIVERY_HQ_FOOTPRINT_SPEC.name,
+        gx: hq?.gx ?? DELIVERY_HQ_FOOTPRINT_SPEC.gx,
+        gz: hq?.gz ?? DELIVERY_HQ_FOOTPRINT_SPEC.gz,
+        widthCells: hq?.widthCells ?? DELIVERY_HQ_FOOTPRINT_SPEC.widthCells,
+        depthCells: hq?.depthCells ?? DELIVERY_HQ_FOOTPRINT_SPEC.depthCells,
       },
       {
         key: 'RAILWAY_YARD',
@@ -4913,6 +4922,113 @@ export class EconomyAndSimulationSystem {
         depthCells: depot?.depthCells ?? 3,
       },
     ];
+  }
+
+  /**
+   * Returns the complete Delivery Headquarters (10x20) corporate overview, active fleet summary
+   * (trucks, trains, cargo planes), elevation layer spec, and empire revenue statistics.
+   */
+  public getDeliveryHqSummary() {
+    const hq = this.placedBuildings.get(DELIVERY_HQ_FOOTPRINT_SPEC.id);
+    const ownedList = Array.from(this.ownedVehicles.values());
+    const trucksCount = ownedList.filter((v) => v.modal === 'ROAD').length;
+    const activeTrucksCount = ownedList.filter(
+      (v) => v.modal === 'ROAD' && v.state !== 'IDLE_AT_DEPOT'
+    ).length;
+
+    const railHub = this.railways.getFreightHubState();
+    const trainsCount =
+      ownedList.filter((v) => v.modal === 'RAIL').length + railHub.trains.length;
+    const activeTrainsCount =
+      ownedList.filter(
+        (v) => v.modal === 'RAIL' && v.state !== 'IDLE_AT_DEPOT'
+      ).length +
+      railHub.trains.filter((t) => String(t.state) !== 'IDLE_WAITING').length;
+
+    const planesCount =
+      ownedList.filter((v) => v.modal === 'AIR').length +
+      (this.airportOps?.getGuestAircraft().length ?? 0);
+    const activePlanesCount =
+      ownedList.filter(
+        (v) => v.modal === 'AIR' && v.state !== 'IDLE_AT_DEPOT'
+      ).length + (this.airportOps?.getGuestAircraft().length ?? 0);
+
+    const shipsCount = ownedList.filter((v) => v.modal === 'WATER').length;
+    const completedContracts = Array.from(this.contracts.values()).reduce(
+      (sum, c) => sum + c.completedCount,
+      0
+    );
+    const totalCargoDeliveredTons = Array.from(this.contracts.values()).reduce(
+      (sum, c) => sum + c.completedCount * c.cargoTons,
+      0
+    );
+
+    const level = hq?.level ?? 1;
+    const maxLevel = hq?.maxLevel ?? DELIVERY_HQ_FOOTPRINT_SPEC.maxLevel;
+    const contractBonusPercent = (level - 1) * 5;
+    const totalFleetCount = trucksCount + trainsCount + planesCount + shipsCount;
+    const activeFleetCount =
+      activeTrucksCount + activeTrainsCount + activePlanesCount;
+
+    return {
+      id: hq?.id ?? DELIVERY_HQ_FOOTPRINT_SPEC.id,
+      name: hq?.name ?? DELIVERY_HQ_FOOTPRINT_SPEC.name,
+      gx: hq?.gx ?? DELIVERY_HQ_FOOTPRINT_SPEC.gx,
+      gz: hq?.gz ?? DELIVERY_HQ_FOOTPRINT_SPEC.gz,
+      widthCells: hq?.widthCells ?? DELIVERY_HQ_FOOTPRINT_SPEC.widthCells,
+      depthCells: hq?.depthCells ?? DELIVERY_HQ_FOOTPRINT_SPEC.depthCells,
+      totalCells:
+        (hq?.widthCells ?? DELIVERY_HQ_FOOTPRINT_SPEC.widthCells) *
+        (hq?.depthCells ?? DELIVERY_HQ_FOOTPRINT_SPEC.depthCells),
+      level,
+      maxLevel,
+      upgradeCost: hq?.upgradeCost ?? 36000,
+      storageCapacityTons: hq?.storageCapacityTons ?? 120,
+      storedCargoTons: hq?.storedCargoTons ?? 48,
+      contractBonusPercent,
+      elevationLayers: DELIVERY_HQ_FOOTPRINT_SPEC.elevationLayers,
+      architecture: DELIVERY_HQ_FOOTPRINT_SPEC.architecture,
+      fleetSummary: {
+        trucks: trucksCount,
+        activeTrucks: activeTrucksCount,
+        trucksTotal: trucksCount,
+        trucksActive: activeTrucksCount,
+        trains: trainsCount,
+        activeTrains: activeTrainsCount,
+        trainsTotal: trainsCount,
+        trainsActive: activeTrainsCount,
+        cargoPlanes: planesCount,
+        activeCargoPlanes: activePlanesCount,
+        cargoPlanesTotal: planesCount,
+        cargoPlanesActive: activePlanesCount,
+        shipsTotal: shipsCount,
+        activeFleetCount,
+        totalFleetCount,
+      },
+      empireRevenue: {
+        currentMoneyBalance: this.money,
+        totalRevenueEarned: this.totalEarnings,
+        totalOperatingExpenses: this.totalSpending,
+        netEmpireProfit: this.totalEarnings - this.totalSpending,
+        completedContracts,
+        totalCargoDeliveredTons,
+      },
+      revenueStats: {
+        currentBalance: this.money,
+        totalRevenue: this.totalEarnings,
+        totalSpending: this.totalSpending,
+        netProfit: this.totalEarnings - this.totalSpending,
+        completedContracts,
+      },
+    };
+  }
+
+  public upgradeBuilding(buildingId: string) {
+    return this.upgradeFacility(buildingId);
+  }
+
+  public getAllBuildings(): PlacedBuildingRecord[] {
+    return this.getAllPlacedBuildings();
   }
 
   public getPlacedBuilding(id: string): PlacedBuildingRecord | undefined {
@@ -5338,14 +5454,18 @@ export class EconomyAndSimulationSystem {
           continue;
         }
         const migratedBuilding: PlacedBuildingRecord =
-          b.id === 'building-city-hq-tower'
+          b.id === DELIVERY_HQ_FOOTPRINT_SPEC.id
             ? {
                 ...b,
-                name: 'Delivery Headquarters',
-                widthCells: 5,
-                depthCells: 7,
-                gx: 78,
-                gz: 44,
+                name: DELIVERY_HQ_FOOTPRINT_SPEC.name,
+                widthCells: DELIVERY_HQ_FOOTPRINT_SPEC.widthCells,
+                depthCells: DELIVERY_HQ_FOOTPRINT_SPEC.depthCells,
+                gx: DELIVERY_HQ_FOOTPRINT_SPEC.gx,
+                gz: DELIVERY_HQ_FOOTPRINT_SPEC.gz,
+                maxLevel: Math.max(
+                  b.maxLevel ?? DELIVERY_HQ_FOOTPRINT_SPEC.maxLevel,
+                  DELIVERY_HQ_FOOTPRINT_SPEC.maxLevel
+                ),
               }
             : { ...b };
         this.placedBuildings.set(migratedBuilding.id, migratedBuilding);

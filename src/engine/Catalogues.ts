@@ -388,15 +388,20 @@ export const BUILDING_CATALOGUE: BuildingCatalogueItem[] = [
     id: 'bld-com-financial-tower',
     name: 'Delivery Headquarters',
     category: 'ROAD_LOGISTICS',
-    description: 'Central 5×7 corporate and transport operations headquarters with glass curtain-wall atrium, executive dispatch center, and landscaped forecourt.',
-    widthCells: 5,
-    depthCells: 7,
-    heightMeters: 13.8,
+    description:
+      'Dedicated 10×20 corporate Delivery Headquarters (CTH / GTE) featuring a stepped L-shaped 5-story glass & concrete structure, rooftop circular Helipad ("H"), solar panel arrays, rooftop garden terraces, entrance portico, and manicured boxwood plaza.',
+    widthCells: 10,
+    depthCells: 20,
+    heightMeters: 16.5,
     price: 48000,
     operatingCostPerMin: 130,
     unlockLevel: 1,
-    allowedZones: [ZoneCategory.CITY, ZoneCategory.LOGISTICS, ZoneCategory.COMMERCIAL_SUPPORT],
-    storageCapacityTons: 80,
+    allowedZones: [
+      ZoneCategory.CITY,
+      ZoneCategory.LOGISTICS,
+      ZoneCategory.COMMERCIAL_SUPPORT,
+    ],
+    storageCapacityTons: 120,
     vehicleSlotCapacity: 0,
     demandsCargo: 'Express Packages & Electronics',
     roofStyle: 'STEPPED_CROWN',
@@ -1190,3 +1195,47 @@ export function getLevelInfoForXp(xp: number): {
     progressRatio,
   };
 }
+
+/**
+ * Authoritative 10x20 Delivery Headquarters (HQ) Spatial Layout, Y-Axis Layering & Architectural Specification.
+ */
+export const DELIVERY_HQ_FOOTPRINT_SPEC = {
+  id: 'building-city-hq-tower',
+  catalogueId: 'bld-com-financial-tower',
+  name: 'Delivery Headquarters',
+  gx: 70,
+  gz: 34,
+  widthCells: 10,
+  depthCells: 20,
+  totalCells: 200,
+  widthMeters: 20,
+  depthMeters: 40,
+  maxLevel: 10,
+  elevationLayers: {
+    baseTerrainGrass: 0.0,
+    landscapedLawnBeds: 0.02,
+    pavedStonePlazaAndSidewalks: 0.03,
+    buildingFoundationPlinth: 0.04,
+  },
+  architecture: {
+    layoutStyle: 'L_SHAPED_STEPPED_CORPORATE_TOWER',
+    mainBlockStories: 5,
+    sideWingStories: 2,
+    hasCircularHelipad: true,
+    hasCircularHelipadH: true,
+    hasAntennaSpire: true,
+    hasSolarPanelArrays: true,
+    hasGreenRooftopPlanters: true,
+    hasRooftopGardenPlanters: true,
+    hasEntrancePortico: true,
+    hasConcreteEntrancePortico: true,
+    brandingSignage: 'CTH / GTE',
+    hasBoxwoodHedgeLawns: true,
+    hasPlazaBenchesAndStreetlamps: true,
+    zeroLooseCrates: true,
+    usesInstancedMeshes: true,
+    usesInstancedWindowFramesAndFoliage: true,
+  },
+} as const;
+
+

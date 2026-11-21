@@ -15,6 +15,7 @@ import {
 } from './WorldConfig';
 import { ForestDensityLevel } from './TerrainWaterSystem';
 import { WorldManager } from './WorldManager';
+import { DELIVERY_HQ_FOOTPRINT_SPEC } from './Catalogues';
 import {
   GTE_FORKLIFT_MODEL_360_SPEC,
   GTE_ROLLING_STOCK_SPEC,
@@ -2757,14 +2758,14 @@ test('Airport Development & Expansion Prompt: 2x2 Freight Roadway, 5t..50t Cargo
       ['PORT', 'DELIVERY_HEADQUARTERS', 'RAILWAY_YARD', 'AIRPORT', 'TRUCK_DEPOT']
     );
 
-    // 2. Verify Delivery Headquarters has exact 5 x 7 grid-block dimensions (10m x 14m)
+    // 2. Verify Delivery Headquarters has exact 10 x 20 grid-block dimensions (20m x 40m = 200 tiles)
     const hq = econ.getPlacedBuilding('building-city-hq-tower');
     assert.ok(hq, 'Delivery Headquarters must exist at game start');
     assert.equal(hq.name, 'Delivery Headquarters');
-    assert.equal(hq.widthCells, 5);
-    assert.equal(hq.depthCells, 7);
-    assert.equal(hq.gx, 78);
-    assert.equal(hq.gz, 44);
+    assert.equal(hq.widthCells, 10);
+    assert.equal(hq.depthCells, 20);
+    assert.equal(hq.gx, 70);
+    assert.equal(hq.gz, 34);
 
     // 3. Verify all random residential, retail, supermarket, and factory clutter was removed from starting world
     const removedIds = [
@@ -3281,6 +3282,123 @@ test('Airport Development & Expansion Prompt: 2x2 Freight Roadway, 5t..50t Cargo
     assert.equal(restoredAnchor.gx, farCoord.gx);
     assert.equal(restoredAnchor.gz, farCoord.gz);
     assert.equal(restoredAnchor.packedCoordKey64Hex, packedHex);
+  });
+
+  await t.test('10x20 Corporate Delivery Headquarters (HQ): Exact Spatial Layout, Y-Axis Layering (0.00/0.02/0.03/0.04), Architectural Fidelity, Fleet/Revenue Summary, Upgrades & Save/Load Persistence', () => {
+    const world = new WorldManager();
+    const econ = world.economy;
+
+    // 1. Reserved 10x20 Tile Footprint & Spatial Layout
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.widthCells, 10);
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.depthCells, 20);
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.totalCells, 200);
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.widthMeters, 20);
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.depthMeters, 40);
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.gx, 70);
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.gz, 34);
+
+    const hq = econ.getPlacedBuilding('building-city-hq-tower');
+    assert.ok(hq);
+    assert.equal(hq.widthCells, 10);
+    assert.equal(hq.depthCells, 20);
+    assert.equal(hq.gx, 70);
+    assert.equal(hq.gz, 34);
+    assert.equal(hq.maxLevel, 10);
+
+    // Every single tile of the 10x20 compound (gx=70..79, gz=34..53) is registered to building-city-hq-tower inside CITY zone
+    let occupiedCount = 0;
+    for (let gx = 70; gx <= 79; gx++) {
+      for (let gz = 34; gz <= 53; gz++) {
+        const bldAtCell = econ.getPlacedBuildingAtCell(gx, gz);
+        assert.ok(bldAtCell, `Expected Delivery HQ building at (${gx}, ${gz})`);
+        assert.equal(bldAtCell.id, 'building-city-hq-tower');
+        assert.equal(world.districts.getZoneAt(gx, gz), ZoneCategory.CITY);
+        occupiedCount++;
+      }
+    }
+    assert.equal(occupiedCount, 200);
+
+    // Road integration: southern plaza edge (gz=53) connects cleanly toward road-city-west-approach (gz=55) with zero overlapping meshes
+    const westRoad = world.roads.getSegment('road-city-west-approach');
+    assert.ok(westRoad);
+    assert.equal(westRoad.start.gz, 55);
+    for (let gx = 70; gx <= 79; gx++) {
+      for (let gz = 34; gz <= 53; gz++) {
+        const entsAtCell = world.entities.getEntitiesAtCell(gx, gz);
+        assert.equal(
+          entsAtCell.some((e) => e.category === 'ROAD'),
+          false,
+          `Delivery HQ cell (${gx}, ${gz}) must not overlap road meshes`
+        );
+      }
+    }
+
+    // 2. Exact Y-Axis Elevation Layering (Zero Z-Fighting)
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.elevationLayers.baseTerrainGrass, 0.0);
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.elevationLayers.landscapedLawnBeds, 0.02);
+    assert.equal(
+      DELIVERY_HQ_FOOTPRINT_SPEC.elevationLayers.pavedStonePlazaAndSidewalks,
+      0.03
+    );
+    assert.equal(
+      DELIVERY_HQ_FOOTPRINT_SPEC.elevationLayers.buildingFoundationPlinth,
+      0.04
+    );
+
+    // 3. Architectural & Visual Fidelity Metadata
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.architecture.mainBlockStories, 5);
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.architecture.sideWingStories, 2);
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.architecture.hasCircularHelipad, true);
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.architecture.hasAntennaSpire, true);
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.architecture.hasSolarPanelArrays, true);
+    assert.equal(
+      DELIVERY_HQ_FOOTPRINT_SPEC.architecture.hasGreenRooftopPlanters,
+      true
+    );
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.architecture.hasEntrancePortico, true);
+    assert.equal(DELIVERY_HQ_FOOTPRINT_SPEC.architecture.usesInstancedMeshes, true);
+
+    // 4. HQ Summary (Company Overview, Active Fleet Summary, Upgrades & Empire Revenue Stats)
+    const summaryBefore = econ.getDeliveryHqSummary();
+    assert.equal(summaryBefore.id, 'building-city-hq-tower');
+    assert.equal(summaryBefore.widthCells, 10);
+    assert.equal(summaryBefore.depthCells, 20);
+    assert.equal(summaryBefore.totalCells, 200);
+    assert.equal(summaryBefore.level, 1);
+    assert.equal(summaryBefore.maxLevel, 10);
+    assert.ok(summaryBefore.fleetSummary.trucks >= 1);
+    assert.ok(summaryBefore.fleetSummary.trains >= 1);
+    assert.ok(summaryBefore.empireRevenue.currentMoneyBalance > 0);
+
+    // 5. Upgrade Delivery Headquarters & verify Save/Load Persistence
+    const upgRes = econ.upgradeBuilding('building-city-hq-tower');
+    assert.equal(upgRes.success, true, upgRes.reason);
+    assert.equal(upgRes.building?.level, 2);
+    assert.ok(
+      (upgRes.building?.storageCapacityTons ?? 0) >
+        summaryBefore.storageCapacityTons
+    );
+
+    const savedJson = world.serializeState();
+    const restoredWorld = new WorldManager();
+    const loadRes = restoredWorld.deserializeState(savedJson);
+    assert.equal(loadRes.success, true);
+
+    const restoredHq = restoredWorld.economy.getPlacedBuilding(
+      'building-city-hq-tower'
+    );
+    assert.ok(restoredHq);
+    assert.equal(restoredHq.widthCells, 10);
+    assert.equal(restoredHq.depthCells, 20);
+    assert.equal(restoredHq.gx, 70);
+    assert.equal(restoredHq.gz, 34);
+    assert.equal(restoredHq.level, 2);
+
+    // Ensure no duplicate HQ buildings were created on reload
+    const allHqBuildings = restoredWorld.economy
+      .getAllBuildings()
+      .filter((b) => b.id === 'building-city-hq-tower');
+    assert.equal(allHqBuildings.length, 1);
   });
 });
 
